@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Relógios Personalizados</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background-color: #f4f4f9;
+      margin: 0;
+      padding: 20px;
+    }
+    h1, h2 {
+      color: #333;
+    }
+    .clock {
+      margin: 30px auto;
+      max-width: 320px;
+    }
+    canvas {
+      background-color: #fff;
+      border: 1px solid #ccc;
+      margin-top: 10px;
+    }
+    #digitalClock {
+      font-size: 1.8em;
+      font-weight: bold;
+      background: #e6e6fa;
+      display: inline-block;
+      padding: 10px 20px;
+      border-radius: 5px;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Relógios de Contagens Personalizadas</h1>
+  
+  <!-- Relógio Digital -->
+  <div class="clock">
+    <h2>Relógio Digital</h2>
+    <div id="digitalClock">Carregando...</div>
+    <p style="font-size:0.9em; color:#666;">
+      Formato: [TIU] - [QT] - [BT]<br>
+      (BT: 0,1s; QT: 10s; TIU: 600s)
+    </p>
+  </div>
+  
+  <!-- Relógio Analógico 1: Ciclo de 6 Horas -->
+  <div class="clock">
+    <h2>Relógio Analógico – Ciclo de 6 Horas</h2>
+    <canvas id="analogClock1" width="300" height="300"></canvas>
+    <p style="font-size:0.9em; color:#666;">
+      Ponteiro azul: 1°/min (360 min = 6h).<br>
+      Ponteiro vermelho: avança a cada 36 min (um TIU discreto).
+    </p>
+  </div>
+  
+  <!-- Relógio Analógico 2: Ciclo Diário e de 15 Dias -->
+  <div class="clock">
+    <h2>Relógio Analógico – 1 Dia / 15 Dias</h2>
+    <canvas id="analogClock2" width="300" height="300"></canvas>
+    <p style="font-size:0.9em; color:#666;">
+      Ponteiro verde: completa 360° em 24h.<br>
+      Ponteiro roxo: 1°/hora (360° em 15 dias).
+    </p>
+  </div>
+  
+  <script>
+    // Registra o instante de início (pode ser considerado como "tempo zero" da simulação)
+    const startTime = Date.now();
+
+    // Função que atualiza o relógio digital
+    function updateDigitalClock(T) {
+      // BT: cada 100 ms (0,1s) – valores de 0 a 99
+      const bt = Math.floor((T / 100) % 100);
+      // QT: cada 10 s — quando BT completa 100 contagens; valores de 0 a 59
+      const qt = Math.floor(T / 10000) % 60;
+      // TIU: quando QT completa 60 contagens; cada TIU equivale a 600 s (10 minutos)
+      const tiu = Math.floor(T / 600000);
+      
+      // Formata com zeros à esquerda
+      const btStr = String(bt).padStart(2, '0');
+      const qtStr = String(qt).padStart(2, '0');
+      // TIU pode ter mais de um dígito, se desejar pode formatar também
+      document.getElementById("digitalClock").innerText = `TIU: ${tiu} - QT: ${qtStr} - BT: ${btStr}`;
+    }
+
+    // Desenha o primeiro relógio analógico (ciclo de 6 horas)
+    function drawAnalogClock1(T) {
+      const canvas = document.getElementById("analogClock1");
+      const ctx = canvas.getContext("2d");
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+      const radius = Math.min(centerX, centerY) - 15;
+      
+      // Limpa o canvas
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // Desenha o círculo base
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+      ctx.strokeStyle = "#333";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      
+      // Tempo em minutos (simulação)
+      const M = T / 60000; // 60000 ms = 1 minuto
+      
+      // Ponteiro "minuto" – movimento contínuo: 1 grau por minuto
+      const angleMinute = ((M % 360) * Math.PI / 180) - Math.PI/2;
+      ctx.strokeStyle = "blue";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(centerX, centerY);
+      ctx.lineTo(centerX + Math.cos(angleMinute) * radius, centerY + Math.sin(angleMinute) * radius);
+      ctx.stroke();
+      
+      // Ponteiro TIU discreto – a cada 36 minutos (ou seja, a cada 36 graus)
+      const tiuDiscrete = Math.floor(M / 36) % 10; // de 0 a 9
+      const angleTIU = (tiuDiscrete * 36 * Math.PI / 180) - Math.PI/2;
+      ctx.strokeStyle = "red";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(centerX, centerY);
+      // Comprimento menor para distinguir
+      ctx.lineTo(centerX + Math.cos(angleTIU) * (radius * 0.7), centerY + Math.sin(angleTIU) * (radius * 0.7));
+      ctx.stroke();
+      
+      // Opcional: Desenha marcações a cada 36° no círculo
+      ctx.strokeStyle = "#555";
+      ctx.lineWidth = 1;
+      for (let deg = 0; deg < 360; deg += 36) {
+        const angle = (deg * Math.PI / 180) - Math.PI/2;
+        const outerX = centerX + Math.cos(angle) * radius;
+        const outerY = centerY + Math.sin(angle) * radius;
+        const innerX = centerX + Math.cos(angle) * (radius - 10);
+        const innerY = centerY + Math.sin(angle) * (radius - 10);
+        ctx.beginPath();
+        ctx.moveTo(innerX, innerY);
+        ctx.lineTo(outerX, outerY);
+        ctx.stroke();
+      }
+    }
+    
+    // Desenha o segundo relógio analógico (um para o dia e outro para 15 dias)
+    function drawAnalogClock2(T) {
+      const canvas = document.getElementById("analogClock2");
+      const ctx = canvas.getContext("2d");
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+      const radius = Math.min(centerX, centerY) - 15;
+      
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // Círculo de base
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+      ctx.strokeStyle = "#333";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      
+      // Ponteiro "Quarto de Dia" – completa uma volta em 24h (24 * 3600000 ms)
+      const oneDay = 24 * 3600000; // ms
+      const angleQuarter = ((T % oneDay) / oneDay) * 2 * Math.PI - Math.PI/2;
+      ctx.strokeStyle = "green";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(centerX, centerY);
+      ctx.lineTo(centerX + Math.cos(angleQuarter) * radius, centerY + Math.sin(angleQuarter) * radius);
+      ctx.stroke();
+      
+      // Ponteiro "Hora" – 1° por hora, completa 360° em 15 dias (15 * 24 = 360 horas)
+      const hoursElapsed = T / 3600000; // converter ms para horas
+      const angleHour = ((hoursElapsed % 360) * Math.PI / 180) - Math.PI/2;
+      ctx.strokeStyle = "purple";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(centerX, centerY);
+      ctx.lineTo(centerX + Math.cos(angleHour) * (radius * 0.7), centerY + Math.sin(angleHour) * (radius * 0.7));
+      ctx.stroke();
+      
+      // Opcional: Desenha marcações a cada 45° para o ponteiro do "Quarto de Dia"
+      ctx.strokeStyle = "#555";
+      ctx.lineWidth = 1;
+      for (let deg = 0; deg < 360; deg += 45) {
+        const angle = (deg * Math.PI / 180) - Math.PI/2;
+        const outerX = centerX + Math.cos(angle) * radius;
+        const outerY = centerY + Math.sin(angle) * radius;
+        const innerX = centerX + Math.cos(angle) * (radius - 10);
+        const innerY = centerY + Math.sin(angle) * (radius - 10);
+        ctx.beginPath();
+        ctx.moveTo(innerX, innerY);
+        ctx.lineTo(outerX, outerY);
+        ctx.stroke();
+      }
+    }
+    
+    // Loop de atualização – usamos requestAnimationFrame para atualizar continuamente
+    function updateClocks() {
+      const now = Date.now();
+      const T = now - startTime; // tempo decorrido em milissegundos
+      
+      updateDigitalClock(T);
+      drawAnalogClock1(T);
+      drawAnalogClock2(T);
+      
+      requestAnimationFrame(updateClocks);
+    }
+    
+    // Inicia a atualização dos relógios
+    updateClocks();
+  </script>
+</body>
+</html>
